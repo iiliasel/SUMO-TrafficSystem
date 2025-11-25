@@ -6,11 +6,11 @@ public class APTTest {
         // Lade native DLLs
         Simulation.preloadLibraries();
 
-        // Starte SUMO mit der richtigen exe + cfg
+        // Starte SUMO mit den NEUEN Pfaden
         Simulation.start(new StringVector(new String[]{
-                "C:\\Users\\ilias\\OneDrive\\Desktop\\SUMO\\sumo-1.25.0\\bin\\sumo-gui.exe",
+                "C:\\Users\\ilias\\OneDrive\\Desktop\\SUMO\\sumo-win64-1.25.0\\sumo-1.25.0\\bin\\sumo-gui.exe",
                 "-c",
-                "C:\\Users\\ilias\\OneDrive\\Desktop\\SUMO\\sumo-1.25.0\\tools\\game\\rail\\test.sumocfg"
+                "C:\\Users\\ilias\\OneDrive\\Desktop\\SUMO\\sumo-win64-1.25.0\\sumo-1.25.0\\tools\\game\\rail\\test.sumocfg"
         }));
 
         // 5 Schritte laufen lassen
@@ -18,7 +18,7 @@ public class APTTest {
             Simulation.step();
         }
 
-        // Verbindung schließen
+        // Verbingung beenden
         Simulation.close();
     }
 }
