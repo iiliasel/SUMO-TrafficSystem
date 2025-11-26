@@ -13,6 +13,8 @@ public class APTTest {
                 "C:\\Users\\ilias\\OneDrive\\Desktop\\SUMO\\sumo-win64-1.25.0\\sumo-1.25.0\\tools\\game\\rail\\test.sumocfg"
         }));
 
+
+
         // 5 Schritte laufen lassen
         for (int i = 0; i < 5; i++) {
             Simulation.step();
