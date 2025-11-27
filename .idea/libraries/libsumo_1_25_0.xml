@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="libsumo-1.25.0">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../../../SUMO/sumo-1.25.0/bin/libsumo-1.25.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
