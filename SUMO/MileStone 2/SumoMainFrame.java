@@ -1,3 +1,5 @@
+// addVehicleBtn() in line 586
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -35,6 +37,7 @@ public class SumoMainFrame extends JFrame {
     private JRadioButton stepModeBtn, continuousModeBtn;
     private ButtonGroup modeGroup;
     private JButton connectBtn, stepForwardBtn, startPauseBtn, resetBtn, disconnectBtn;
+    // Initialize VehicleButton  
     private JButton addVehicleBtn;
     private JSlider speedSlider;
     private JLabel speedLabel;

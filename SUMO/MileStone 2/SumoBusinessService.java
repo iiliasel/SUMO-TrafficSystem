@@ -1,3 +1,6 @@
+// VehicleInjection() in line 567
+
+
 import org.eclipse.sumo.libtraci.*;
 
 
@@ -586,13 +589,6 @@ public class SumoBusinessService {
             throw new SumoConnectException("Vehicle injection failed: " + e.getMessage());
         }
     }
-
-
-
-
-
-
-
 
 
 
