@@ -1,4 +1,4 @@
-// VehicleInjection() in line 567
+
 
 import org.eclipse.sumo.libtraci.*;
 import org.eclipse.sumo.libtraci.Edge;
@@ -361,8 +361,8 @@ public class SumoBusinessService {
             int tlGreen = 0;
             int tlYellow = 0;
 
-            // 预设交通灯相位顺序与状态的映射（需根据你的路网配置修改！）
-            // 例如：索引0=红灯，1=绿灯，2=黄灯（请根据实际相位定义调整）
+            // Preset mapping between traffic light phase indices and signal states
+            // Example: index 0 = red, 1 = green, 2 = yellow (adjust according to the network configuration)
             int redPhaseIndex = 0;
             int greenPhaseIndex = 1;
             int yellowPhaseIndex = 2;
@@ -641,16 +641,25 @@ public class SumoBusinessService {
             }
         }
     }
-    // Ilias Vehicle spawn
+
+    /**
+     * Injects a vehicle into the SUMO simulation using a given route.
+     *
+     * @param vehicleId Unique vehicle identifier
+     * @param routeId   ID of a valid SUMO route
+     * @throws SumoConnectException if the injection fails
+     */
     public void injectVehicle(String vehicleId, String routeId) throws SumoConnectException {
         try {
+            // Define the vehicle type to be used for injection
             String typeId = "DEFAULT_VEHTYPE";
+
+            // Set departure time to the current simulation time
             String depart = "now";
 
-
-            // minimaler gültiger libtraci Aufruf
+            // Add Vehicle with five parameters
             Vehicle.add(vehicleId, routeId, typeId, depart, "free");
-
+           
             System.out.println("Injected vehicle: " + vehicleId);
 
         } catch (Exception e) {

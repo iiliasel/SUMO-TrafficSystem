@@ -1,4 +1,4 @@
-// addVehicleBtn() in line 586
+
 
 import org.eclipse.sumo.libtraci.Route;
 
@@ -589,6 +589,10 @@ public class SumoMainFrame extends JFrame {
         });
 
         // Ilias Vehicle Button
+        /**
+         * Action listener for adding a new vehicle to the simulation.
+         */
+
         addVehicleBtn.addActionListener(e -> {
             try {
                 String vehId = "veh" + System.currentTimeMillis();
