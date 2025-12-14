@@ -658,10 +658,12 @@ public class SumoBusinessService {
         }
     }
 
-    //Control Traffic Lights Enes, ALex
+    //Control Traffic Lights
     public void trafficLightControls(String tlId, String mode) {
         try {
-            switch (mode.toLowerCase()) {
+
+            //Options Available for User to set the Traffic Lights
+            switch (mode) {
                 case "auto":
                     TrafficLight.setProgram(tlId, "0");
                     break;
@@ -679,6 +681,7 @@ public class SumoBusinessService {
                 }
             }
 
+            //Displaying that changes have been Made on the GUI Log
             mainFrame.log("Traffic Light " + tlId + " set to " + mode);
 
         } catch (Exception e) {
