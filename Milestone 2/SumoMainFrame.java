@@ -259,9 +259,12 @@ public class SumoMainFrame extends JFrame {
         resetBtn.setEnabled(false);
         disconnectBtn = new JButton("Close");
         disconnectBtn.setEnabled(false);
+
         addVehicleBtn = new JButton("Add Vehicle");
+        addVehicleBtn.setEnabled(false);
 
         tlControlBtn = new JButton("TL Controls"); //TL Control Button erstellen
+        tlControlBtn.setEnabled(false);
 
 
 
@@ -617,20 +620,28 @@ public class SumoMainFrame extends JFrame {
             }
         });
 
-        // Enes, Alex Traffic Light Control
+        /*Traffic Light Control
+        GUI Button, Logic for listing available Traffic Lights in sumoconfig file
+         */
         tlControlBtn.addActionListener(e -> {
             JPopupMenu tlPopup = new JPopupMenu();
 
             try{
+                //Listing all available Traffic Lights
                 List<String> tlIds = TrafficLight.getIDList();
 
-                if(tlIds.isEmpty()){
 
+                //Error message when Sumoconfig has no Traffic Lights
+                if(tlIds.isEmpty()){
+                    JOptionPane.showMessageDialog(this, "No Traffic Lights found", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
 
                 for(String tlId : tlIds){
-                    JMenu tlOptions = new JMenu(tlId);
+                    JMenu tlOptions = new JMenu(tlId); //Displaying all available Traffic Lights
 
+
+                    // Displaying Options User can choose for selected Traffic Light
                     JMenuItem autoModeBtn = new JMenuItem("Auto");
                     autoModeBtn.addActionListener(e1 ->
                             businessService.trafficLightControls(tlId, "auto")
@@ -653,9 +664,8 @@ public class SumoMainFrame extends JFrame {
                 }
             }catch (Exception tle){
                 tle.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Error loading Traffic Lights"+ tle.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
-
-
 
             tlPopup.show(tlControlBtn, 0, tlControlBtn.getHeight());
         });
@@ -677,6 +687,12 @@ public class SumoMainFrame extends JFrame {
         setMapToolsEnabled(false);
         // save data disabled
         saveDataItem.setEnabled(false);
+
+        //add Vehicle Button
+        addVehicleBtn.setEnabled(false);
+
+        //Traffic Light Controll Button
+        tlControlBtn.setEnabled(false);
     }
 
     /**
@@ -693,6 +709,12 @@ public class SumoMainFrame extends JFrame {
         disconnectBtn.setEnabled(isConnected);
         setMapToolsEnabled(isConnected);
         saveDataItem.setEnabled(isConnected);
+
+        //enabling add Vehicle Button when Connected to Sumo
+        addVehicleBtn.setEnabled(isConnected);
+
+        //enabling Traffic Lights Controll Button when Connected
+        tlControlBtn.setEnabled(isConnected);
 
         // reset button text when continuous mode stops
         if (isStepMode && isContinuousRunning) {
