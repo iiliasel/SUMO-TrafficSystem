@@ -1,7 +1,9 @@
-
+// addVehicleBtn() in line 586
 
 import org.eclipse.sumo.libtraci.Route;
+import org.eclipse.sumo.libtraci.TrafficLight;
 
+import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -11,6 +13,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.List;
 
 /**
  * main dashboard:
@@ -43,6 +46,9 @@ public class SumoMainFrame extends JFrame {
     private JButton connectBtn, stepForwardBtn, startPauseBtn, resetBtn, disconnectBtn;
     // Initialize VehicleButton  
     private JButton addVehicleBtn;
+
+    private JButton tlControlBtn;
+
     private JSlider speedSlider;
     private JLabel speedLabel;
     private JTextArea logArea;
@@ -255,12 +261,18 @@ public class SumoMainFrame extends JFrame {
         disconnectBtn.setEnabled(false);
         addVehicleBtn = new JButton("Add Vehicle");
 
+        tlControlBtn = new JButton("TL Controls"); //TL Control Button erstellen
+
+
 
         controlBtnPanel.add(stepForwardBtn);
         controlBtnPanel.add(startPauseBtn);
         controlBtnPanel.add(resetBtn);
         controlBtnPanel.add(disconnectBtn);
         controlBtnPanel.add(addVehicleBtn);
+
+        controlBtnPanel.add(tlControlBtn); //TL Control Button Panel hinzufügen
+
         controlSubPanel.add(controlBtnPanel, gbc);
 
         // speed adjust
@@ -589,10 +601,6 @@ public class SumoMainFrame extends JFrame {
         });
 
         // Ilias Vehicle Button
-        /**
-         * Action listener for adding a new vehicle to the simulation.
-         */
-
         addVehicleBtn.addActionListener(e -> {
             try {
                 String vehId = "veh" + System.currentTimeMillis();
@@ -609,6 +617,48 @@ public class SumoMainFrame extends JFrame {
             }
         });
 
+        // Enes, Alex Traffic Light Control
+        tlControlBtn.addActionListener(e -> {
+            JPopupMenu tlPopup = new JPopupMenu();
+
+            try{
+                List<String> tlIds = TrafficLight.getIDList();
+
+                if(tlIds.isEmpty()){
+
+                }
+
+                for(String tlId : tlIds){
+                    JMenu tlOptions = new JMenu(tlId);
+
+                    JMenuItem autoModeBtn = new JMenuItem("Auto");
+                    autoModeBtn.addActionListener(e1 ->
+                            businessService.trafficLightControls(tlId, "auto")
+                    );
+                    tlOptions.add(autoModeBtn);
+
+                    JMenuItem redModeBtn = new JMenuItem("All Red");
+                    redModeBtn.addActionListener(e1 ->
+                            businessService.trafficLightControls(tlId, "red")
+                    );
+                    tlOptions.add(redModeBtn);
+
+                    JMenuItem greenModeBtn = new JMenuItem("All Green");
+                    greenModeBtn.addActionListener(e1 ->
+                            businessService.trafficLightControls(tlId, "green")
+                    );
+                    tlOptions.add(greenModeBtn);
+
+                    tlPopup.add(tlOptions);
+                }
+            }catch (Exception tle){
+                tle.printStackTrace();
+            }
+
+
+
+            tlPopup.show(tlControlBtn, 0, tlControlBtn.getHeight());
+        });
 
 
     }
