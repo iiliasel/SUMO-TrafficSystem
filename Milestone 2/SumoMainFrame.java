@@ -1,4 +1,4 @@
-// addVehicleBtn() in line 586
+
 
 import org.eclipse.sumo.libtraci.Route;
 import org.eclipse.sumo.libtraci.TrafficLight;
@@ -44,11 +44,8 @@ public class SumoMainFrame extends JFrame {
     private JRadioButton stepModeBtn, continuousModeBtn;
     private ButtonGroup modeGroup;
     private JButton connectBtn, stepForwardBtn, startPauseBtn, resetBtn, disconnectBtn;
-    // Initialize VehicleButton  
     private JButton addVehicleBtn;
-
     private JButton tlControlBtn;
-
     private JSlider speedSlider;
     private JLabel speedLabel;
     private JTextArea logArea;
@@ -68,6 +65,7 @@ public class SumoMainFrame extends JFrame {
     private JLabel statStepLabel, statAvgSpeedLabel, statEfficiencyLabel;
 
     // system configuration parameters
+    // Please Change the path here
     private String sumoGuiPath = "C:\\Sumo\\bin\\sumo-gui.exe";
     private String configPath;
     private int traciPort = 8813;
@@ -603,7 +601,8 @@ public class SumoMainFrame extends JFrame {
             }
         });
 
-        // Ilias Vehicle Button
+        /* Add Vehicle Button
+         */
         addVehicleBtn.addActionListener(e -> {
             try {
                 String vehId = "veh" + System.currentTimeMillis();

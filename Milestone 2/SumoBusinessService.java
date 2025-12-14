@@ -1,4 +1,4 @@
-// VehicleInjection() in line 567
+
 
 import org.eclipse.sumo.libtraci.*;
 import org.eclipse.sumo.libtraci.Edge;
@@ -641,14 +641,12 @@ public class SumoBusinessService {
             }
         }
     }
-    // Ilias Vehicle spawn
+
     public void injectVehicle(String vehicleId, String routeId) throws SumoConnectException {
         try {
             String typeId = "DEFAULT_VEHTYPE";
             String depart = "now";
 
-
-            // minimaler gültiger libtraci Aufruf
             Vehicle.add(vehicleId, routeId, typeId, depart, "free");
 
             System.out.println("Injected vehicle: " + vehicleId);
