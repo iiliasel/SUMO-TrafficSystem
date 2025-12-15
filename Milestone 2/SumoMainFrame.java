@@ -1,5 +1,6 @@
 
 
+import org.eclipse.sumo.libtraci.Edge;
 import org.eclipse.sumo.libtraci.Route;
 import org.eclipse.sumo.libtraci.TrafficLight;
 
@@ -606,9 +607,8 @@ public class SumoMainFrame extends JFrame {
         addVehicleBtn.addActionListener(e -> {
             try {
                 String vehId = "veh" + System.currentTimeMillis();
-                String rouId = Route.getIDList().get(0);
 
-                businessService.injectVehicle(vehId, rouId);
+                businessService.injectVehicle(vehId);
                 log("Vehicle injected: " + vehId);
             } catch (Exception ex) {
                 ex.printStackTrace();

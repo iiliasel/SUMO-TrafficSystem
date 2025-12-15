@@ -642,12 +642,12 @@ public class SumoBusinessService {
         }
     }
 
-    public void injectVehicle(String vehicleId, String routeId) throws SumoConnectException {
+    public void injectVehicle(String vehicleId) throws SumoConnectException {
         try {
             String typeId = "DEFAULT_VEHTYPE";
             String depart = "now";
-
-            Vehicle.add(vehicleId, routeId, typeId, depart, "free");
+            String RouteID = Route.getIDList().get(0);
+            Vehicle.add(vehicleId, RouteID, typeId, depart, "free");
 
             System.out.println("Injected vehicle: " + vehicleId);
 
