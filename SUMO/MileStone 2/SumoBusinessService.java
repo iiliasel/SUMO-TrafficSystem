@@ -1,8 +1,6 @@
-// VehicleInjection() in line 567
-
-
 import org.eclipse.sumo.libtraci.*;
-
+import org.eclipse.sumo.libtraci.Edge;
+import java.awt.BasicStroke;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -20,7 +18,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 /**
  * service class:
  *  encapsulate all business logic
@@ -30,6 +29,7 @@ import java.util.Locale;
 public class SumoBusinessService {
     // UI reference:only used for updating UI state and receiving configuration parameters,does not intrude on UI logic
     private final SumoMainFrame mainFrame;
+    private static final Logger logger = LogManager.getLogger(SumoBusinessService.class);
 
     // map related core parameters
     private float mapScale = 1.0f; // map scaling ratio（range0.1-5.0）
@@ -49,12 +49,33 @@ public class SumoBusinessService {
     /**
      * constructor method,inject UI instance,initialize dependencies
      *
-     * @param mainFrame main window interface example
      */
     public SumoBusinessService(SumoMainFrame mainFrame) {
         this.mainFrame = mainFrame;
-        // initialize map pan listener(bind to the UI canvas)
-        //initMapPanListener();
+    }
+
+
+
+    /* locating by name to avoid type conversion errors
+    searching for the component named "mapCanvas" from the mian window's content panel
+     */
+    private JPanel getMapCanvas() {
+        try {
+            Component comp = findComponentByName(mainFrame.getContentPane(), "mapCanvas");
+            if (comp == null) {
+                logger.warn("Failed to retrieve map canvas:No component named mapCanvas found");
+                return null;
+            }
+            // validate the component type to make sure it's a JPanel
+            if (!(comp instanceof JPanel)) {
+                logger.warn("Failed to retrieve map canvas:The component found isn't a JPanel");
+                return null;
+            }
+            return (JPanel) comp; //conversion
+        } catch (Exception e) {
+            logger.error("Failed to retrieve map canvas：" + e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -64,7 +85,7 @@ public class SumoBusinessService {
     private void initMapPanListener() {
         JPanel mapCanvas = getMapCanvas();
         if (mapCanvas == null) {
-            mainFrame.log("Map initialization failed, unable to bind pan listener");
+            logger.info("Map initialization failed, unable to bind pan listener");
             return;
         }
 
@@ -72,13 +93,13 @@ public class SumoBusinessService {
         mapCanvas.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-            }
+            }//don't handle only click event
 
             @Override
             public void mousePressed(MouseEvent e) {
                 if (isPanMode && mainFrame.isConnected()) {
                     lastMousePos = e.getPoint();
-                }
+                }//on when panmode start and mainFrame.isConnected(),record the position
             }
 
             @Override
@@ -100,11 +121,13 @@ public class SumoBusinessService {
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (lastMousePos != null && mainFrame.isConnected()) {
+                    //calculate the offset
                     int dx = e.getX() - lastMousePos.x;
                     int dy = e.getY() - lastMousePos.y;
                     mapOffset.translate(dx, dy);
+                    //update mouse position
                     lastMousePos = e.getPoint();
-                    mapCanvas.repaint(); // refresh map
+                    mapCanvas.repaint(); // refresh map to show the map after dragginf
                 }
             }
 
@@ -114,27 +137,10 @@ public class SumoBusinessService {
         });
     }
 
-    /* locating by name to avoid type conversion errors
-    searching for the component named "mapCanvas" from the mian window's content panel
-     */
-    private JPanel getMapCanvas() {
-        try {
-            Component comp = findComponentByName(mainFrame.getContentPane(), "mapCanvas");
-            if (comp == null) {
-                mainFrame.log("Failed to retrieve map canvas:No component named mapCanvas found");
-                return null;
-            }
-            // validate the component type to make sure it's a JPanel
-            if (!(comp instanceof JPanel)) {
-                mainFrame.log("Failed to retrieve map canvas:The component found isn't a JPanel");
-                return null;
-            }
-            return (JPanel) comp; //conversion
-        } catch (Exception e) {
-            mainFrame.log("Failed to retrieve map canvas：" + e.getMessage());
-            return null;
-        }
-    }
+
+
+
+
 
     public boolean isConnected() {
         return mainFrame.isConnected();
@@ -147,7 +153,7 @@ public class SumoBusinessService {
      * handling abnormal scenarios such as configuration verification and port occupancy
      */
     public void connectSumo() {
-        mainFrame.log("Start to execute SUMO connection operation...");
+        logger.info("Start to execute SUMO connection operation...");
         // get configuration parameters from the interface
         String configPath = mainFrame.getConfigPath();
         String sumoPath = mainFrame.getSumoGuiPath();
@@ -156,18 +162,18 @@ public class SumoBusinessService {
         // configuration parameter validation,executed on the UI thread,pop-up window
         if (configPath == null || configPath.isEmpty()) {
             JOptionPane.showMessageDialog(mainFrame, "Please select SUMO configuration file first！", "Error", JOptionPane.ERROR_MESSAGE);
-            mainFrame.log("Connection failed:No configuration file");
+            logger.warn("Connection failed:No configuration file");
             return;
         }
 
         File sumoFile = new File(sumoPath);
         if (!sumoFile.exists()) {
             JOptionPane.showMessageDialog(mainFrame, "SUMO path errre：" + sumoPath, "error", JOptionPane.ERROR_MESSAGE);
-            mainFrame.log("Connection failed:SUMO path doesn't exist");
+            logger.warn("Connection failed:SUMO path doesn't exist");
             return;
         }
         if (!sumoFile.getName().endsWith("sumo-gui.exe")) {
-            mainFrame.log("Connection failed:Path is not sumo-gui.exe -> " + sumoPath);
+            logger.warn("Connection failed:Path is not sumo-gui.exe -> " + sumoPath);
             JOptionPane.showMessageDialog(mainFrame, "Please select the sumo-gui.exe file！");
             return;
         }
@@ -183,20 +189,20 @@ public class SumoBusinessService {
         // start a sub-thread to excute time-consuming operations
         new Thread(() -> {
             try {
-                mainFrame.log("SUMO startup command：" + String.join(" ", args));
-                // perform time-consuming operations in a sub-thread
+                logger.debug("SUMO startup command：" + String.join(" ", args));
+                // load some libraries
                 Simulation.preloadLibraries();
-                mainFrame.log("Starting SUMO...");
+                logger.info("Starting SUMO...");
                 Simulation.start(new StringVector(args));
 
                 // 5. update the UI after successful startup
                 SwingUtilities.invokeLater(() -> {
                     mainFrame.updateSumoConnectionStatus(true);
-                    mainFrame.log("SUMO connection successful！");
+                    logger.info("SUMO connection successful！");
                     initMapPanListener();  //initialize the map listener
                 });
             } catch (Exception e) {
-                mainFrame.log("SUMO startup failed：" + e.getMessage());
+                logger.error("SUMO startup failed：" + e.getMessage());
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(mainFrame, "Connection failed：" + e.getMessage());
                 });
@@ -209,7 +215,7 @@ public class SumoBusinessService {
      */
     public void disconnectSumo() {
         if (!mainFrame.isConnected()) {
-            mainFrame.log("Not connected,no need to disconnect");
+            logger.info("Not connected,no need to disconnect");
             return;
         }
 
@@ -225,10 +231,10 @@ public class SumoBusinessService {
             resetMapView();
             // notification interface updates connection status
             mainFrame.updateSumoConnectionStatus(false);
-            mainFrame.log("SUMO connection closed");
+            logger.info("SUMO connection closed");
         } catch (Exception e) {
             JOptionPane.showMessageDialog(mainFrame, "Failed to close connection：" + (e.getMessage() != null ? e.getMessage() : "error"), "error", JOptionPane.ERROR_MESSAGE);
-            mainFrame.log("Failed to close connection：" + (e.getMessage() != null ? e.getMessage() : "error"));
+            logger.error("Failed to close connection：" + (e.getMessage() != null ? e.getMessage() : "error"));
         }
     }
 
@@ -245,16 +251,16 @@ public class SumoBusinessService {
             // single-step:1 step=1 second
             Simulation.step();
             totalSteps++;
-            mainFrame.log("Simulation progressed to step" + totalSteps);
+            logger.info("Simulation progressed to step" + totalSteps);
             // update simulation data and synchronize to interface
             updateSimulationData();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(mainFrame, "Single-step failed：" + (e.getMessage() != null ? e.getMessage() : "error"), "error", JOptionPane.ERROR_MESSAGE);
-            mainFrame.log("Single-step failed：" + (e.getMessage() != null ? e.getMessage() : "error"));
+            logger.error("Single-step failed：" + (e.getMessage() != null ? e.getMessage() : "error"));
             // handle connection interruption
             if (e.getMessage() != null && e.getMessage().contains("Connection reset")) {
                 mainFrame.updateSumoConnectionStatus(false);
-                mainFrame.log("SUMO connection has been interruption");
+                logger.info("SUMO connection has been interruption");
             }
         }
     }
@@ -296,13 +302,13 @@ public class SumoBusinessService {
 
                     // switch UI thread to update state
                     SwingUtilities.invokeLater(() -> {
-                        mainFrame.log("The simulation has been reset to its initial state");
+                        logger.info("The simulation has been reset to its initial state");
                         updateSimulationData();
                     });
                 } catch (Exception e) {
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(mainFrame, "Reset failed：" + (e.getMessage() != null ? e.getMessage() : "error"), "error", JOptionPane.ERROR_MESSAGE);
-                        mainFrame.log("Reset failed：" + (e.getMessage() != null ? e.getMessage() : "error"));
+                        logger.error("Reset failed：" + (e.getMessage() != null ? e.getMessage() : "error"));
                     });
                 }
             }).start();
@@ -409,7 +415,7 @@ public class SumoBusinessService {
             mainFrame.updateDashboard(data);
 
         } catch (Exception e) {
-            mainFrame.log("Data updating failed：" + (e.getMessage() != null ? e.getMessage() : "error"));
+            logger.warn("Data updating failed：" + (e.getMessage() != null ? e.getMessage() : "error"));
         }
     }
 
@@ -417,61 +423,135 @@ public class SumoBusinessService {
      * map drawing：based on Graphics2D to realize zooming,panning,element drawing
      * draw core elements such as road networks,traffic lights,vehicles and support status visualization
      *
-     * @param g          draw contexr
-     * @param canvasSize canvas size
      */
     public void drawMap(Graphics g, Dimension canvasSize) {
         if (!mainFrame.isConnected()) {
-            // display a prompt message when not connected
-            g.setColor(Color.GRAY);
-            g.setFont(new Font("Arial", Font.PLAIN, 16));
-            String tip = "Please connect to SUMO to load the map";
-            int x = (canvasSize.width - g.getFontMetrics().stringWidth(tip)) / 2;
-            int y = canvasSize.height / 2;
-            g.drawString(tip, x, y);
+            // 未连接SUMO时，显示提示信息
+            // When not connected to SUMO, display prompt information
             return;
         }
 
         try {
             Graphics2D g2d = (Graphics2D) g;
-            // save original drawing state for later restoration
+            // 保存原始绘图变换状态，用于后续恢复
+            // Save the original drawing transformation state for later restoration
             AffineTransform originalTransform = g2d.getTransform();
 
-            // set scaling and panning transformations to center the map
+            // 坐标转换：将地图平移至画布中心并应用偏移量，然后应用缩放
+            // Coordinate transformation: Translate the map to the center of the canvas with offset, then apply scaling
             g2d.translate(canvasSize.width / 2 + mapOffset.x, canvasSize.height / 2 + mapOffset.y);
             g2d.scale(mapScale, mapScale);
 
-            // 1. draw road network
+            // 1. 绘制路网（替换硬编码逻辑）
+            // 1. Draw road network (replace hard-coded logic)
             drawRoadNetwork(g2d);
 
-            // 2. draw traffic lights
+            // 2. 绘制交通灯（保持现有逻辑，确保坐标正确）
+            // 2. Draw traffic lights (keep existing logic, ensure correct coordinates)
             drawTrafficLights(g2d);
 
-            // 3. draw vehicles
+            // 3. 启用车辆绘制
+            // 3. Enable vehicle drawing
+            drawVehicles(g2d);
 
-            // restore original drawing state
+            // 恢复原始绘图变换状态
+            // Restore original drawing transformation state
             g2d.setTransform(originalTransform);
         } catch (Exception e) {
-            mainFrame.log("Map drawing failed：" + (e.getMessage() != null ? e.getMessage() : "error"));
+            logger.warn("Map drawing failed：" + e.getMessage());
         }
     }
 
-    /**
-     * Draw road network: Simplified implementation of intersection road network, can be extended to parse SUMO road network data
-     *
-     * @param g2d Graphics context
-     */
+
+    private List<TraCIPosition> getEdgeShape(String edgeId) {
+        try {
+            // 1. 获取道路包含的车道数量
+            // 1. Get the number of lanes contained in the edge
+            int laneCount = Edge.getLaneNumber(edgeId);
+            if (laneCount == 0) {
+                logger.info("Edge {} has no lanes", edgeId);
+                return new ArrayList<>();
+            }
+
+            // 2. 通过索引获取第一条车道的ID（SUMO车道ID格式：edgeId_0, edgeId_1...）
+            // 2. Get the ID of the first lane by index ,lane ID format: edgeId_0, edgeId_1...)
+            String firstLaneId = edgeId + "_0";
+
+            // 3. Get the shape of the lane
+            return Lane.getShape(firstLaneId).getValue();
+        } catch (Exception e) {
+            logger.warn("Failed to get shape for edge {}: {}", edgeId, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private double getLaneWidth(String edgeId) {
+        try {
+            // 1. 获取车道数量
+            // 1. Get the number of lanes
+            int laneCount = Edge.getLaneNumber(edgeId);
+            if (laneCount == 0) {
+                return 3.5; // 返回默认宽度（米）
+                // Return default width (meters)
+            }
+
+            // 2. 第一条车道ID（格式：edgeId_0）
+            // 2. ID of the first lane (format: edgeId_0)
+            String firstLaneId = edgeId + "_0";
+
+            // 3. 获取该车道的宽度
+            // 3. Get the width of the lane
+            return Lane.getWidth(firstLaneId);
+        } catch (Exception e) {
+            logger.warn("Failed to get width for edge {}: {}", edgeId, e.getMessage());
+            return 3.5; // 默认宽度（米）
+            // Default width (meters)
+        }
+    }
+
     private void drawRoadNetwork(Graphics2D g2d) {
-        g2d.setColor(new Color(200, 200, 200));
-        int roadWidth = 30;
-        // Horizontal road
-        g2d.fillRect(-500, -15, 1000, roadWidth);
-        // Vertical road
-        g2d.fillRect(-15, -500, roadWidth, 1000);
-        // Draw road boundaries
-        g2d.setColor(Color.DARK_GRAY);
-        g2d.drawRect(-500, -15, 1000, roadWidth);
-        g2d.drawRect(-15, -500, roadWidth, 1000);
+        try {
+            // 1. 获取所有道路ID
+            // 1. Get all edge IDs
+            StringVector edgeIds = Edge.getIDList();
+            g2d.setColor(new Color(200, 200, 200)); // 道路颜色（浅灰）
+            // Road color (light gray)
+
+            // 2. 遍历每条道路
+            // 2. Traverse each edge
+            for (String edgeId : edgeIds) {
+                // 3. 获取道路形状（通过上述修正的方法）
+                // 3. Get edge shape (via the corrected method above)
+                List<TraCIPosition> shape = getEdgeShape(edgeId);
+                if (shape.size() < 2) {
+                    continue; // 跳过无效形状（少于2个点无法构成道路）
+                    // Skip invalid shapes (less than 2 points cannot form a road)
+                }
+
+                // 4. 坐标转换（修正Y轴方向）
+                // 4. Coordinate transformation (correct Y-axis direction)
+                int[] xPoints = new int[shape.size()];
+                int[] yPoints = new int[shape.size()];
+                for (int j = 0; j < shape.size(); j++) {
+                    TraCIPosition pos = shape.get(j);
+                    xPoints[j] = (int) pos.getX(); // X坐标直接转换
+                    // X coordinate direct conversion
+                    yPoints[j] = (int) -pos.getY(); // 反转Y轴（SUMO Y轴向上，屏幕Y轴向下）
+                    // Invert Y-axis (SUMO Y-axis up, screen Y-axis down)
+                }
+
+                // 5. 获取车道宽度并设置线宽（结合缩放比例）
+                // 5. Get lane width and set line width (combined with scale ratio)
+                double laneWidth = getLaneWidth(edgeId);
+                g2d.setStroke(new BasicStroke((float) (laneWidth * mapScale)));
+
+                // 6. 绘制道路（使用折线连接所有坐标点）
+                // 6. Draw road (connect all coordinate points with polyline)
+                g2d.drawPolyline(xPoints, yPoints, shape.size());
+            }
+        } catch (Exception e) {
+            logger.error("Failed to draw road network: {}", e.getMessage());
+        }
     }
 
     /**
@@ -487,11 +567,11 @@ public class SumoBusinessService {
             if (controlledJunctions.isEmpty()) {
                 continue;
             }
-            String junctionID = controlledJunctions.get(0);
+            String junctionID = controlledJunctions.getFirst();
             TraCIPosition pos = Junction.getPosition(junctionID);
             int x = (int) pos.getX();
-            int y = (int) pos.getY();
-
+            //int y = (int) pos.getY();
+            int y = (int) -pos.getY();
             // Set color according to status
             String phase = TrafficLight.getPhaseName(tlId);
             if (phase.contains("r")) {
@@ -532,8 +612,8 @@ public class SumoBusinessService {
             TraCIPosition pos = Vehicle.getPosition(vehicleId);
             double angle = Vehicle.getAngle(vehicleId);
             int x = (int) pos.getX();
-            int y = (int) pos.getY();
-
+            //int y = (int) pos.getY();
+            int y = (int) -pos.getY();
             // Set vehicle color according to speed
             double speed = Vehicle.getSpeed(vehicleId);
             if (speed > 0) {
@@ -547,8 +627,8 @@ public class SumoBusinessService {
             // Rotate around vehicle center (matching driving direction)
             g2d.rotate(Math.toRadians(angle), x, y);
             // Draw vehicle (represented by triangle)
-            int[] xs = {x, x - 15, x + 15};
-            int[] ys = {y - 20, y + 10, y + 10};
+            int[] xs = {x, x - 8, x + 8};
+            int[] ys = {y - 10, y + 5, y + 5};
             g2d.fillPolygon(xs, ys, 3);
             g2d.setColor(Color.BLACK);
             g2d.drawPolygon(xs, ys, 3);
@@ -563,35 +643,6 @@ public class SumoBusinessService {
             }
         }
     }
-    // Ilias Vehicle spawn
-    public void injectVehicle(String vehicleId) throws SumoConnectException {
-        try {
-            String typeId = "DEFAULT_VEHTYPE";
-            StringVector allRoutes = Route.getIDList();
-            double depart = 0.0;
-
-            // Real Routes Filter
-            List<String> validRoutes = new ArrayList<>();
-            for (String r : allRoutes) {
-                if (!r.startsWith("!")) {
-                    validRoutes.add(r);
-                }
-            }
-
-            String routeId = validRoutes.get(0);
-
-            // minimaler gültiger libtraci Aufruf
-            Vehicle.add(vehicleId, routeId, typeId, String.valueOf(depart), "0");
-
-            System.out.println("Injected vehicle: " + vehicleId);
-
-        } catch (Exception e) {
-            throw new SumoConnectException("Vehicle injection failed: " + e.getMessage());
-        }
-    }
-
-
-
 
     /**
      * Map zoom method: Zoom proportionally, limit zoom range
@@ -606,7 +657,7 @@ public class SumoBusinessService {
         if (mapCanvas != null) {
             mapCanvas.repaint();
         }
-        mainFrame.log("Map zoomed to " + String.format("%.1f", mapScale) + "x");
+        logger.info("Map zoomed to {}x", String.format("%.1f", mapScale));
     }
 
     /**
@@ -614,7 +665,7 @@ public class SumoBusinessService {
      */
     public void togglePanMode() {
         isPanMode = !isPanMode;
-        mainFrame.log("Map pan mode: " + (isPanMode ? "Enabled" : "Disabled"));
+        logger.info("Map pan mode: {}", isPanMode ? "Enabled" : "Disabled");
         // Switch mouse cursor style
         JPanel mapCanvas = getMapCanvas();
         if (mapCanvas != null) {
@@ -634,7 +685,7 @@ public class SumoBusinessService {
             mapCanvas.setCursor(Cursor.getDefaultCursor());
             mapCanvas.repaint();
         }
-        mainFrame.log("Map view has been reset");
+        logger.info("Map view has been reset");
     }
 
     /**
@@ -646,7 +697,7 @@ public class SumoBusinessService {
         if (mapCanvas != null) {
             mapCanvas.repaint();
         }
-        mainFrame.log("Vehicle label display: " + (showVehicleLabel ? "Enabled" : "Disabled"));
+        logger.info("Vehicle label display: {}", showVehicleLabel ? "Enabled" : "Disabled");
     }
 
     /**
@@ -658,7 +709,7 @@ public class SumoBusinessService {
         if (mapCanvas != null) {
             mapCanvas.repaint();
         }
-        mainFrame.log("Traffic light status display: " + (showTLStatus ? "Enabled" : "Disabled"));
+        logger.info("Traffic light status display: {}", showTLStatus ? "Enabled" : "Disabled");
     }
 
     /**
@@ -709,13 +760,13 @@ public class SumoBusinessService {
 
                 writer.flush();
                 JOptionPane.showMessageDialog(mainFrame, "Data saved to: " + filePath, "Save Successful", JOptionPane.INFORMATION_MESSAGE);
-                mainFrame.log("Simulation data saved successfully: " + filePath);
+                logger.info("Simulation data saved successfully: {}", filePath);
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(mainFrame, "Failed to save data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                mainFrame.log("Failed to save data: " + e.getMessage());
+                logger.info("Failed to save data: {}", e.getMessage());
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(mainFrame, "Failed to get data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                mainFrame.log("Failed to get data: " + e.getMessage());
+                logger.info("Failed to get data: {}", e.getMessage());
             }
         }
     }
@@ -737,7 +788,7 @@ public class SumoBusinessService {
 
             if (configFiles == null || configFiles.length == 0) {
                 JOptionPane.showMessageDialog(mainFrame, "No .sumocfg configuration files found in this folder!", "Error", JOptionPane.ERROR_MESSAGE);
-                mainFrame.log("Scenario loading failed: No configuration files in folder");
+                logger.info("Scenario loading failed: No configuration files in folder");
                 return;
             }
 
@@ -762,7 +813,7 @@ public class SumoBusinessService {
                     // Update interface configuration information
                     mainFrame.setConfigPath(configPath);
                     mainFrame.setScenarioName(selectedFile.getName().replace(".sumocfg", ""));
-                    mainFrame.log("Scenario loaded successfully: " + selectedFile.getName());
+                    logger.info("Scenario loaded successfully: {}", selectedFile.getName());
                     JOptionPane.showMessageDialog(mainFrame, "Configuration file loaded: " + selectedFile.getName(), "Load Successful", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(mainFrame, "Invalid input number!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -787,7 +838,7 @@ public class SumoBusinessService {
             if (sumoFile.getName().equals("sumo-gui.exe")) {
                 mainFrame.setSumoGuiPath(sumoFile.getAbsolutePath());
                 JOptionPane.showMessageDialog(mainFrame, "SUMO path set to: " + sumoFile.getAbsolutePath(), "Setting Successful", JOptionPane.INFORMATION_MESSAGE);
-                mainFrame.log("SUMO path updated: " + sumoFile.getAbsolutePath());
+                logger.info("SUMO path updated: {}", sumoFile.getAbsolutePath());
             } else {
                 JOptionPane.showMessageDialog(mainFrame, "Please select sumo-gui.exe file!", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -809,7 +860,7 @@ public class SumoBusinessService {
             if (port >= 1024 && port <= 65535) {
                 mainFrame.setTraciPort(port);
                 JOptionPane.showMessageDialog(mainFrame, "TRACI port set to: " + port, "Setting Successful", JOptionPane.INFORMATION_MESSAGE);
-                mainFrame.log("TRACI port updated: " + port);
+                logger.info("TRACI port updated: {}", port);
             } else {
                 JOptionPane.showMessageDialog(mainFrame, "Port number must be between 1024-65535!", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -832,7 +883,7 @@ public class SumoBusinessService {
             showVehicleLabel = true;
             showTLStatus = true;
             JOptionPane.showMessageDialog(mainFrame, "Default configuration restored!", "Restore Successful", JOptionPane.INFORMATION_MESSAGE);
-            mainFrame.log("System restored to default configuration");
+            logger.info("System restored to default configuration");
             // Refresh map
             JPanel mapCanvas = getMapCanvas();
             if (mapCanvas != null) {
@@ -845,21 +896,22 @@ public class SumoBusinessService {
      * Display user guide: Pop up help dialog explaining core operation流程
      */
     public void showUserGuide() {
-        String guide = "Intelligent Transportation SUMO Simulation Control System User Guide:\n" +
-                "1. Configuration Process:\n" +
-                "   - Click \"Select File\" to load .sumocfg configuration file\n" +
-                "   - To modify SUMO path or port, set via \"Configuration\" menu\n" +
-                "2. Simulation Control:\n" +
-                "   - Step Mode: Click \"Step Forward\" to run step by step after connection\n" +
-                "   - Continuous Mode: Switch mode, set speed with slider, click \"Start/Pause\"\n" +
-                "3. Map Operations:\n" +
-                "   - Zoom In/Out: Adjust map display scale\n" +
-                "   - Pan: Drag map after enabling pan mode\n" +
-                "   - Can show/hide vehicle labels and traffic light status\n" +
-                "4. Data Viewing:\n" +
-                "   - Dashboard displays core data, click cards to view details\n" +
-                "   - Save simulation data as CSV file via \"File\" menu\n" +
-                "5. Scenario Management: Batch manage configuration files via \"File-Load Simulation Scenario\"";
+        String guide = """
+                Intelligent Transportation SUMO Simulation Control System User Guide:
+                1. Configuration Process:
+                   - Click "Select File" to load .sumocfg configuration file
+                   - To modify SUMO path or port, set via "Configuration" menu
+                2. Simulation Control:
+                   - Step Mode: Click "Step Forward" to run step by step after connection
+                   - Continuous Mode: Switch mode, set speed with slider, click "Start/Pause"
+                3. Map Operations:
+                   - Zoom In/Out: Adjust map display scale
+                   - Pan: Drag map after enabling pan mode
+                   - Can show/hide vehicle labels and traffic light status
+                4. Data Viewing:
+                   - Dashboard displays core data, click cards to view details
+                   - Save simulation data as CSV file via "File" menu
+                5. Scenario Management: Batch manage configuration files via "File-Load Simulation Scenario\"""";
         JOptionPane.showMessageDialog(mainFrame, guide, "User Guide", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -867,11 +919,12 @@ public class SumoBusinessService {
      * Display about information: Pop up software version and copyright information
      */
     public void showAbout() {
-        String about = "Intelligent Transportation SUMO Simulation Control System v1.0\n" +
-                "Development Dependencies: SUMO 1.25.0, Java Swing, TraCI SDK\n" +
-                "Core Functions: SUMO simulation control, map visualization, data statistics and export\n" +
-                "Design Principles: Decoupling of interface and business logic, modular architecture\n" +
-                "Copyright © 2025 Intelligent Transportation Simulation Team";
+        String about = """
+                Intelligent Transportation SUMO Simulation Control System v1.0
+                Development Dependencies: SUMO 1.25.0, Java Swing, TraCI SDK
+                Core Functions: SUMO simulation control, map visualization, data statistics and export
+                Design Principles: Decoupling of interface and business logic, modular architecture
+                Copyright © 2025 Intelligent Transportation Simulation Team""";
         JOptionPane.showMessageDialog(mainFrame, about, "About System", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -912,7 +965,7 @@ public class SumoBusinessService {
             JOptionPane.showMessageDialog(mainFrame, scrollPane, "Vehicle Detailed Data", JOptionPane.PLAIN_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(mainFrame, "Failed to get vehicle details: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            mainFrame.log("Failed to get vehicle details: " + e.getMessage());
+            logger.warn("Failed to get vehicle details: {}", e.getMessage());
         }
     }
 
@@ -951,7 +1004,7 @@ public class SumoBusinessService {
             JOptionPane.showMessageDialog(mainFrame, scrollPane, "Traffic Light Detailed Data", JOptionPane.PLAIN_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(mainFrame, "Failed to get traffic light details: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            mainFrame.log("Failed to get traffic light details: " + e.getMessage());
+            logger.warn("Failed to get traffic light details: {}", e.getMessage());
         }
     }
 
@@ -979,26 +1032,30 @@ public class SumoBusinessService {
             double greenRate = tlTotal > 0 ? (double) data.getTlGreen() / tlTotal * 100 : 0.0; // Green light ratio
 
             // Build statistical details
-            String detail = String.format("Simulation Statistical Detailed Data\n" +
-                            "======================\n" +
-                            "1. Basic Information\n" +
-                            "   - Simulation Time: %s\n" +
-                            "   - Total Simulation Steps: %d steps\n" +
-                            "   - Total Vehicles: %d vehicles\n" +
-                            "   - Total Traffic Lights: %d lights\n" +
-                            "\n2. Vehicle Operation Status\n" +
-                            "   - Running: %d vehicles (%.1f%%)\n" +
-                            "   - Congested: %d vehicles (%.1f%%)\n" +
-                            "   - Static: %d vehicles (%.1f%%)\n" +
-                            "\n3. Traffic Light Status\n" +
-                            "   - Green: %d lights (%.1f%%)\n" +
-                            "   - Red: %d lights\n" +
-                            "   - Yellow: %d lights\n" +
-                            "\n4. Performance Indicators\n" +
-                            "   - Average Speed: %.1f km/h\n" +
-                            "   - Traffic Efficiency: %.1f%%\n" +
-                            "   - Total Distance Traveled: %.1f km\n" +
-                            "   - Total Travel Time: %.1f h",
+            String detail = String.format("""
+                            Simulation Statistical Detailed Data
+                            ======================
+                            1. Basic Information
+                               - Simulation Time: %s
+                               - Total Simulation Steps: %d steps
+                               - Total Vehicles: %d vehicles
+                               - Total Traffic Lights: %d lights
+                            
+                            2. Vehicle Operation Status
+                               - Running: %d vehicles (%.1f%%)
+                               - Congested: %d vehicles (%.1f%%)
+                               - Static: %d vehicles (%.1f%%)
+                            
+                            3. Traffic Light Status
+                               - Green: %d lights (%.1f%%)
+                               - Red: %d lights
+                               - Yellow: %d lights
+                            
+                            4. Performance Indicators
+                               - Average Speed: %.1f km/h
+                               - Traffic Efficiency: %.1f%%
+                               - Total Distance Traveled: %.1f km
+                               - Total Travel Time: %.1f h""",
                     data.getSimulationTime(),
                     data.getTotalSteps(),
                     vehicleTotal,
@@ -1021,7 +1078,7 @@ public class SumoBusinessService {
             JOptionPane.showMessageDialog(mainFrame, detail, "Simulation Statistical Detailed Data", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(mainFrame, "Failed to get statistical details: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            mainFrame.log("Failed to get statistical details: " + e.getMessage());
+            logger.warn("Failed to get statistical details: {}", e.getMessage());
         }
     }
 

@@ -1,5 +1,5 @@
-// addVehicleBtn() in line 586
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
+import com.sumo.log.TextAreaAppender;
 /**
  * main dashboard:
  *  implement UI layout
@@ -18,7 +19,7 @@ import java.io.File;
 public class SumoMainFrame extends JFrame {
     // creat a business logic processing object to decoupling user interface from business logic
     private final SumoBusinessService businessService;
-
+    private static final Logger logger = LogManager.getLogger(SumoMainFrame.class);
     // top navigation bar component
     private JMenuBar menuBar;
     private JMenu fileMenu, configMenu, helpMenu;
@@ -58,7 +59,7 @@ public class SumoMainFrame extends JFrame {
     private JLabel statStepLabel, statAvgSpeedLabel, statEfficiencyLabel;
 
     // system configuration parameters
-    private String sumoGuiPath = "C:\\Sumo\\bin\\sumo-gui.exe";
+    private String sumoGuiPath = "D:\\SUMO\\sumo-1.25.0\\bin\\sumo-gui.exe";
     private String configPath;
     private int traciPort = 8813;
     private boolean isConnected = false;
@@ -78,6 +79,13 @@ public class SumoMainFrame extends JFrame {
         bindEvents();
         // initialize tate
         initComponentStatus();
+        bindLogAreaToAppender(); // 绑定logArea到Appender
+    }
+
+    // 在SumoMainFrame的构造方法或初始化方法中
+    private void bindLogAreaToAppender() {
+        TextAreaAppender.setLogTextArea(logArea); // 绑定GUI的日志区域
+        System.out.println("logArea绑定状态：" + (logArea != null)); // 确认绑定成功
     }
 
     /**
@@ -249,14 +257,12 @@ public class SumoMainFrame extends JFrame {
         resetBtn.setEnabled(false);
         disconnectBtn = new JButton("Close");
         disconnectBtn.setEnabled(false);
-        addVehicleBtn = new JButton("Add Vehicle");
 
 
         controlBtnPanel.add(stepForwardBtn);
         controlBtnPanel.add(startPauseBtn);
         controlBtnPanel.add(resetBtn);
         controlBtnPanel.add(disconnectBtn);
-        controlBtnPanel.add(addVehicleBtn);
         controlSubPanel.add(controlBtnPanel, gbc);
 
         // speed adjust
@@ -283,7 +289,7 @@ public class SumoMainFrame extends JFrame {
         gbc.weighty = 1.0;
         logArea = new JTextArea(8, 20);
         logArea.setEditable(false);
-        logScroll = new JScrollPane(logArea);
+        JScrollPane logScroll = new JScrollPane(logArea);
         logScroll.setBorder(new TitledBorder("Operation Log"));
         controlSubPanel.add(logScroll, gbc);
     }
@@ -406,8 +412,8 @@ public class SumoMainFrame extends JFrame {
         vehicleGbc.gridy = 0;
         vehicleCard.add(vehicleTitle, vehicleGbc);
 
-        vehicleTotalLabel = new JLabel("Total：-- vehicles", SwingConstants.CENTER);
-        vehicleTotalLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        vehicleTotalLabel = new JLabel("Total：--vehicles", SwingConstants.CENTER);
+        vehicleTotalLabel.setFont(new Font("宋体", Font.PLAIN, 14));
         vehicleGbc.gridx = 0;
         vehicleGbc.gridy = 1;
         vehicleCard.add(vehicleTotalLabel, vehicleGbc);
@@ -436,7 +442,7 @@ public class SumoMainFrame extends JFrame {
         tlCard.add(tlTitle, tlGbc);
 
         tlTotalLabel = new JLabel("Total：-- ", SwingConstants.CENTER);
-        tlTotalLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        tlTotalLabel.setFont(new Font("宋体", Font.PLAIN, 14));
         tlGbc.gridx = 0;
         tlGbc.gridy = 1;
         tlCard.add(tlTotalLabel, tlGbc);
@@ -470,7 +476,7 @@ public class SumoMainFrame extends JFrame {
         statCard.add(statTitle, statGbc);
 
         statStepLabel = new JLabel("Total Steps：--", SwingConstants.CENTER);
-        statStepLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        statStepLabel.setFont(new Font("宋体", Font.PLAIN, 14));
         statGbc.gridx = 0;
         statGbc.gridy = 1;
         statCard.add(statStepLabel, statGbc);
@@ -583,24 +589,6 @@ public class SumoMainFrame extends JFrame {
                 businessService.showStatDetail();
             }
         });
-
-        // Ilias Vehicle Button
-        addVehicleBtn.addActionListener(e -> {
-            try {
-                String vehId = "veh" + System.currentTimeMillis();
-                businessService.injectVehicle(vehId + System.currentTimeMillis());
-                log("Vehicle injected: " + vehId);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this,
-                        "Vehicle injection failed:\n" + ex.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-
-
     }
 
     /**
@@ -656,7 +644,7 @@ public class SumoMainFrame extends JFrame {
             configPathField.setText(configPath);
             String scenarioName = configFile.getName().replace(".sumocfg", "");
             scenarioNameField.setText(scenarioName);
-            log("Selected File：" + configFile.getName());
+            logger.info("Selected configuration file: {}", configFile.getName());
             connectBtn.setEnabled(true);
         }
     }
@@ -679,7 +667,7 @@ public class SumoMainFrame extends JFrame {
         isContinuousRunning = true;
         startPauseBtn.setText("Pause");
         continuousTimer.start();
-        log("Continuous simulation has started，speed：Level" + speedSlider.getValue() );
+        logger.info("Continuous simulation started. Speed level: {}", speedSlider.getValue());
     }
 
     /**
@@ -689,7 +677,7 @@ public class SumoMainFrame extends JFrame {
         isContinuousRunning = false;
         startPauseBtn.setText("Start");
         continuousTimer.stop();
-        log("Continuous simulation has been paused");
+        logger.info("Continuous simulation has been paused");
     }
 
     /**
@@ -705,10 +693,12 @@ public class SumoMainFrame extends JFrame {
     private void handleExit() {
         int option = JOptionPane.showConfirmDialog(this, "Terminate the simulation and exit？", "Exit Confirmation", JOptionPane.YES_NO_OPTION);
         if (option == JOptionPane.YES_OPTION) {
+            logger.info("User confirmed exit. Terminating simulation...");
             // close connection before exit
             if (isConnected) {
                 businessService.disconnectSumo();
             }
+            logger.info("Simulation exited successfully. System exiting with code 0");
             System.exit(0);
         }
     }
@@ -765,16 +755,7 @@ public class SumoMainFrame extends JFrame {
     }
 
     /**
-     * log output
-     */
-    public void log(String msg) {
-        String time = String.format("[%tT]", System.currentTimeMillis());
-        logArea.append(time + " " + msg + "\n");
-        // scroll to the bottom using native JTextArea API
-        logArea.setCaretPosition(logArea.getDocument().getLength());
-    }
-    /**
-    *set configuration file path to synchronize the update of the interface text boxes
+     *set configuration file path to synchronize the update of the interface text boxes
      **/
     public void setConfigPath(String configPath){
         this.configPath = configPath;

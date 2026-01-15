@@ -17,7 +17,7 @@ public class SumoGUIMain extends JFrame {
     private JLabel tlCountLabel, vehicleCountLabel; // data presentation
 
     // some SUMO paraments
-    private String sumoGuiPath = "C:\\Sumo\\bin\\sumo-gui.exe";
+    private String sumoGuiPath = "D:\\SUMO\\sumo-1.25.0\\bin\\sumo-gui.exe";
     private String configPath;
     private boolean isConnected = false;
 

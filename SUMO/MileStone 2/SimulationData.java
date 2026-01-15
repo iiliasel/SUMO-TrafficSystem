@@ -2,23 +2,24 @@
  * Simulation data encapsulation class:
  *  to pass all statistical data required by the dashboard
  */
+
 public class SimulationData {
     // Vehicle-related Data
-    private int vehicleTotal;       // total vehicles
-    private int vehicleRunning;     // number of running vehicles
-    private int vehicleCongested;   // number of congested vehicles
+    private final int vehicleTotal;       // total vehicles
+    private final int vehicleRunning;     // number of running vehicles
+    private final int vehicleCongested;   // number of congested vehicles
 
     // Traffic-light related data
-    private int tlTotal;            // total lights
-    private int tlRed;
-    private int tlGreen;
-    private int tlYellow;
+    private final int tlTotal;            // total lights
+    private final int tlRed;
+    private final int tlGreen;
+    private final int tlYellow;
 
     // Simulation statistical data
-    private int totalSteps;         // total steps
-    private double avgSpeed;        // average speed（km/h）
-    private double trafficEfficiency;
-    private String simulationTime;  // simulation time（HH:MM:SS）
+    private final int totalSteps;         // total steps
+    private final double avgSpeed;        // average speed（km/h）
+    private final double trafficEfficiency;
+    private final String simulationTime;  // simulation time（HH:MM:SS）
 
     // constructor:receive all data and initializes
     public SimulationData(
