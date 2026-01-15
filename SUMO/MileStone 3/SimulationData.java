@@ -49,3 +49,4 @@ public class SimulationData {
     public double getTrafficEfficiency() { return trafficEfficiency; }
     public String getSimulationTime() { return simulationTime; }
 }
+

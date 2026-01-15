@@ -254,6 +254,14 @@ public class SumoBusinessService {
         }
 
         try {
+            SimulationData data = getCurrentSimulationData();
+            String csvPath = SimulationStatsExporter.exportToCSV(data);
+            System.out.println("CSV exported to: " + csvPath);
+        } catch (Exception ex) {
+            System.err.println("CSV sxport failed: " + ex.getMessage());
+        }
+
+        try {
             // Stop continuous simulation if running
             if (mainFrame.getisContinuousRunning()) {
                 mainFrame.stopContinuousSimulation();
