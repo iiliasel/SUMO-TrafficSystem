@@ -1,0 +1,12 @@
+Metric, Value
+Total Vehicles,10
+Running Vehicles,9
+Congested Vehicles,0
+Traffic Lights Total,48
+Red Lights,0
+Green Lights,48
+Yellow lights,0
+Total Steps,8
+Average Speed (km/h),10.773913043478261
+Traffic Efficiency (%),90.0
+Simulation Time,00:00:08
